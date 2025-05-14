@@ -1,0 +1,10 @@
+fastapi==0.111.*
+uvicorn[standard]==0.29.*
+pydantic==2.*
+rocksdict==0.3.*
+aioraft-ng==0.1.5        # ← pacote real no PyPI
+prometheus-client==0.20.*
+loguru==0.7.*
+pytest==8.*
+pytest-asyncio==0.23.*
+httpx==0.27.*

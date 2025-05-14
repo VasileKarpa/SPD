@@ -1,32 +1,41 @@
-version: "3.9"
 services:
-  db:
-    image: mysql:8.3          # última versão estável
-    restart: unless-stopped
+  node1:
+    build: ./backend          
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: kvstore
-    volumes:
-      - db_data:/var/lib/mysql
+      NODE_ID: node1
+      PEERS: "node2:7000,node3:7000"
+      RAFT_PORT: 7000
     ports:
-      - "3306:3306"           # opcional: expor ao host
+      - "8001:8000"
+      - "7001:7000"
+    volumes:
+      - node1_data:/srv/data
 
-  backend:
+  node2:
     build: ./backend
-    depends_on:
-      - db
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: root
-      DB_PASS: root
-      DB_NAME: kvstore
-      # se ficares com RocksDB, não precisas destas vars
+      NODE_ID: node2
+      PEERS: "node1:7000,node3:7000"
+      RAFT_PORT: 7000
     ports:
-      - "8000:8000"
+      - "8002:8000"
+      - "7002:7000"
     volumes:
-      - backend_data:/srv/data          # RocksDB files (se usares)
+      - node2_data:/srv/data
+
+  node3:
+    build: ./backend
+    environment:
+      NODE_ID: node3
+      PEERS: "node1:7000,node2:7000"
+      RAFT_PORT: 7000
+    ports:
+      - "8003:8000"
+      - "7003:7000"
+    volumes:
+      - node3_data:/srv/data
 
 volumes:
-  db_data:
-  backend_data:
+  node1_data:
+  node2_data:
+  node3_data:
