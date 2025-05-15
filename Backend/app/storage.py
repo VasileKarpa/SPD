@@ -1,23 +1,24 @@
-# Backend/app/storage.py
-from typing import Union
+# backend/app/storage.py
 from rocksdict import Rdict, Options
+
 
 class Storage:
     def __init__(self, path: str):
-        self.db = Rdict(
-            path,
-            options=Options(raw_mode=True, create_if_missing=True)
-        )
+        # raw_mode=True → as chaves/valores já vêm em bytes,
+        # deixa-os exactamente como estão.
+        opts = Options(raw_mode=True)
+        # NÃO mexemos em create_if_missing: o default já cria
+        self.db = Rdict(path, options=opts)
 
-    def put(self, key: bytes, value: bytes):
-        self.db[key] = value
+    def put(self, k: bytes, v: bytes):
+        self.db[k] = v
 
-    def get(self, key: bytes) -> Union[bytes, None]:
-        return self.db.get(key, None)
+    def get(self, k: bytes):
+        return self.db.get(k, None)
 
-    def delete(self, key: bytes):
-        if key in self.db:
-            del self.db[key]
+    def delete(self, k: bytes):
+        if k in self.db:
+            del self.db[k]
 
     def close(self):
         self.db.close()

@@ -1,8 +1,9 @@
 fastapi==0.111.*
 uvicorn[standard]==0.29.*
 pydantic==2.*
-rocksdict==0.3.*
-aioraft-ng==0.1.5        # ← pacote real no PyPI
+aioraft-ng==0.1.5   
+grpcio>=1.48,<1.49
+rocksdict==0.3.*  
 prometheus-client==0.20.*
 loguru==0.7.*
 pytest==8.*
