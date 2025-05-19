@@ -1,27 +1,17 @@
-# backend/app/api.py
-import asyncio
 from pathlib import Path
-
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from prometheus_client import Counter, Gauge, generate_latest
-
-from .storage   import Storage
-from .consensus import start_raft, put as raft_put, get as raft_get
+from psycopg2.extras import RealDictCursor
+from .storage import Storage
 
 # ──────────────────────────────── Instâncias globais ────────────────────────────────
-DB_PATH = Path(__file__).parent.parent / "data"
-DB_PATH.mkdir(parents=True, exist_ok=True)
+store = Storage()
+app   = FastAPI()
 
-store       = Storage(str(DB_PATH / "kv.rocks"))
-app         = FastAPI()
-REQ_COUNT   = Counter("kv_requests_total", "Total de requisições", ["method"])
-IS_LEADER   = Gauge("is_leader", "É líder? 1=yes 0=no")
-
-# ─────────────────────────────────── Modelos ────────────────────────────────────────
-class KVPair(BaseModel):
-    key: str
-    value: str
+REQ_COUNT = Counter("kv_requests_total", "Total de requisições", ["method"])
+IS_LEADER = Gauge("is_leader",       "É líder? 1=yes 0=no")
 
 # ─────────────────────────── Middleware de métricas ────────────────────────────────
 @app.middleware("http")
@@ -29,40 +19,59 @@ async def _metrics_mw(request: Request, call_next):
     REQ_COUNT.labels(request.method).inc()
     return await call_next(request)
 
-# ───────────────────────────────── End-points ───────────────────────────────────────
-@app.get("/health")
+# ───────────────────────────────── End-points /api ─────────────────────────────────
+class KVPair(BaseModel):
+    key:   str
+    value: str
+
+@app.get("/api/health")
 async def health():
     try:
-        _ = store.get(b"__ping__")
+        with store.conn.cursor() as cur:
+            cur.execute("SELECT 1;")
         return {"status": "ok"}
     except Exception as exc:
-        raise HTTPException(500, f"DB error: {exc}")
+        raise HTTPException(500, f"Postgres error: {exc}")
 
-@app.get("/metrics")
+@app.get("/api/metrics")
 async def metrics():
-    # ainda não expomos o estado do líder → fica sempre 0
     IS_LEADER.set(0)
     return generate_latest()
 
-@app.on_event("startup")
-async def _startup():
-    asyncio.create_task(start_raft())
-
-@app.put("/")
+@app.put("/api")
 async def put_value(kv: KVPair):
-    await raft_put(kv.key.encode(), kv.value.encode())
+    store.put(kv.key.encode(), kv.value.encode())
     return {"status": "stored"}
 
-@app.get("/")
+@app.get("/api")
 async def get_value(key: str):
-    value = raft_get(key.encode())
-    if value is None:
+    val = store.get(key.encode())
+    if val is None:
         raise HTTPException(404, "key not found")
-    return {"data": {"key": key, "value": value.decode()}}
+    return {"data": {"key": key, "value": val.decode()}}
 
-@app.delete("/")
+@app.delete("/api")
 async def delete_value(key: str):
     if store.get(key.encode()) is None:
         raise HTTPException(404, "key not found")
     store.delete(key.encode())
     return {"status": "deleted"}
+
+# ─────────────────────────── Servir front-end estático ────────────────────────────
+
+@app.get("/api/all")
+async def list_all():
+    try:
+        with store.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT key, value FROM kv_store;")
+            rows = cur.fetchall()  # lista de dicts: [{"key": "...", "value": "..."}, ...]
+        return {"data": rows}
+    except Exception as exc:
+        raise HTTPException(500, f"Postgres error: {exc}")
+
+
+app.mount(
+    "/",
+    StaticFiles(directory=str(Path(__file__).parent.parent / "frontend"), html=True),
+    name="frontend",
+)

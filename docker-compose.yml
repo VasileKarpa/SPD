@@ -1,25 +1,85 @@
+volumes:
+  db-data:
+
 services:
-  node1:
-    build: ./backend
-    hostname: node1            # importante: hostnames = NODE_ID
+  db:
+    image: postgres:14
     environment:
-      NODE_ID: node1
-      PEERS: "node2,node3"
-      RAFT_PORT: 7000
-    ports: ["8001:8000","7001:7000"]
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bd_spd
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  node1:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    hostname: node1
+    environment:
+      - NODE_ID=node1
+      - PEERS=node2,node3
+      - RAFT_PORT=7000
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=bd_spd
+    depends_on:
+      - db
+    ports:
+      - "8001:8000"
+      - "7001:7000"
+    volumes:
+      - ./frontend:/srv/frontend
+
   node2:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     hostname: node2
     environment:
-      NODE_ID: node2
-      PEERS: "node1,node3"
-      RAFT_PORT: 7000
-    ports: ["8002:8000","7002:7000"]
+      - NODE_ID=node2
+      - PEERS=node1,node3
+      - RAFT_PORT=7000
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=bd_spd
+    depends_on:
+      - db
+    ports:
+      - "8002:8000"
+      - "7002:7000"
+    volumes:
+      - ./frontend:/srv/frontend
+
   node3:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     hostname: node3
     environment:
-      NODE_ID: node3
-      PEERS: "node1,node2"
-      RAFT_PORT: 7000
-    ports: ["8003:8000","7003:7000"]
+      - NODE_ID=node3
+      - PEERS=node1,node2
+      - RAFT_PORT=7000
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=bd_spd
+    depends_on:
+      - db
+    ports:
+      - "8003:8000"
+      - "7003:7000"
+    volumes:
+      - ./frontend:/srv/frontend
+
+
+
+
+

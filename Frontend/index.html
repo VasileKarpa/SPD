@@ -6,34 +6,152 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>
-  <div id="app">
+  <div id="app" class="app-container">
     <h1>Sistema Key-Value</h1>
-    <p>{{ message }}</p>
-    <input v-model="key" placeholder="Chave" />
-    <button @click="fetchValue">Obter Valor</button>
+
+    <!-- 1. Obter um valor -->
+    <div class="controls">
+      <input v-model="key" placeholder="Chave (GET)" />
+      <button @click="fetchValue">Obter Valor</button>
+    </div>
     <p v-if="value">Valor: {{ value }}</p>
+
+    <hr/>
+
+    <!-- 2. Inserir / Atualizar -->
+    <h2>Inserir/Atualizar (PUT)</h2>
+    <div class="controls">
+      <input v-model="newKey"   placeholder="Chave" />
+      <input v-model="newValue" placeholder="Valor" />
+      <button @click="putValue">Salvar</button>
+    </div>
+    <p v-if="putStatus">{{ putStatus }}</p>
+
+    <hr/>
+
+    <!-- 3. Eliminar -->
+    <h2>Eliminar (DELETE)</h2>
+    <div class="controls">
+      <input v-model="delKey" placeholder="Chave (DELETE)" />
+      <button @click="deleteValue">Eliminar</button>
+    </div>
+    <p v-if="delStatus">{{ delStatus }}</p>
+
+    <hr/>
+
+    <!-- 4. Listar tudo -->
+    <h2>Listar Todos (GET /api/all)</h2>
+    <button @click="listAll">Listar</button>
+    <ul v-if="allPairs.length">
+      <li v-for="pair in allPairs" :key="pair.key">
+        <strong>{{ pair.key }}:</strong> {{ pair.value }}
+      </li>
+    </ul>
   </div>
 
   <script>
-    const { createApp, ref } = Vue;
-    createApp({
-      setup() {
-        const message = ref("Bem-vindo ao front-end!");
-        const key     = ref("");
-        const value   = ref("");
-        async function fetchValue() {
-          try {
-            const res = await fetch(`/api/?key=${encodeURIComponent(key.value)}`);
-            if (!res.ok) throw new Error("Chave não encontrada");
-            const json = await res.json();
-            value.value = json.data.value;
-          } catch (err) {
-            value.value = err.message;
-          }
+  const { createApp, ref } = Vue;
+  createApp({
+    setup() {
+      const key       = ref("");
+      const value     = ref("");
+      const newKey    = ref("");
+      const newValue  = ref("");
+      const putStatus = ref("");
+      const delKey    = ref("");
+      const delStatus = ref("");
+      const allPairs  = ref([]);
+
+      async function fetchValue() {
+        try {
+          const res = await fetch(`/api?key=${encodeURIComponent(key.value)}`);
+          if (!res.ok) throw new Error("Chave não encontrada");
+          const json = await res.json();
+          value.value = json.data.value;
+        } catch (err) {
+          value.value = err.message;
         }
-        return { message, key, value, fetchValue };
       }
-    }).mount("#app");
+
+      async function putValue() {
+        try {
+          const res = await fetch("/api", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key:newKey.value, value:newValue.value }),
+          });
+          const json = await res.json();
+          putStatus.value = json.status || JSON.stringify(json.detail);
+        } catch (err) {
+          putStatus.value = err.message;
+        }
+      }
+
+      async function deleteValue() {
+        try {
+          const res = await fetch(`/api?key=${encodeURIComponent(delKey.value)}`, {
+            method: "DELETE"
+          });
+          const json = await res.json();
+          delStatus.value = json.status || JSON.stringify(json.detail);
+        } catch (err) {
+          delStatus.value = err.message;
+        }
+      }
+
+      async function listAll() {
+        try {
+          const res = await fetch("/api/all");
+          const json = await res.json();
+          allPairs.value = json.data;  // [{key, value},...]
+        } catch (err) {
+          allPairs.value = [];
+          console.error(err);
+        }
+      }
+
+      return {
+        key, value,
+        newKey, newValue, putStatus,
+        delKey, delStatus,
+        allPairs,
+        fetchValue, putValue, deleteValue, listAll
+      };
+    }
+  }).mount("#app");
   </script>
+
+  <style>
+    .app-container {
+      max-width: 500px;
+      margin: 2rem auto;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+    }
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      background-color: #42b883;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { background-color: #369f6b; }
+    ul { padding-left: 1rem; }
+    li { margin-bottom: 0.25rem; }
+  </style>
 </body>
 </html>
