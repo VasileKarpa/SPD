@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistema Key-Value</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+  <div id="app">
+    <h1>Sistema Key-Value</h1>
+    <p>{{ message }}</p>
+    <input v-model="key" placeholder="Chave" />
+    <button @click="fetchValue">Obter Valor</button>
+    <p v-if="value">Valor: {{ value }}</p>
+  </div>
+
+  <script>
+    const { createApp, ref } = Vue;
+    createApp({
+      setup() {
+        const message = ref("Bem-vindo ao front-end!");
+        const key     = ref("");
+        const value   = ref("");
+        async function fetchValue() {
+          try {
+            const res = await fetch(`/api/?key=${encodeURIComponent(key.value)}`);
+            if (!res.ok) throw new Error("Chave não encontrada");
+            const json = await res.json();
+            value.value = json.data.value;
+          } catch (err) {
+            value.value = err.message;
+          }
+        }
+        return { message, key, value, fetchValue };
+      }
+    }).mount("#app");
+  </script>
+</body>
+</html>
