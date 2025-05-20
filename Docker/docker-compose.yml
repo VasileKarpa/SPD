@@ -1,41 +1,102 @@
+version: "3.8"
+
 services:
-  node1:
-    build: ./backend          
-    environment:
-      NODE_ID: node1
-      PEERS: "node2:7000,node3:7000"
-      RAFT_PORT: 7000
-    ports:
-      - "8001:8000"
-      - "7001:7000"
+  nginx:
+    image: nginx:latest
     volumes:
-      - node1_data:/srv/data
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - api1
+      - api2
 
-  node2:
-    build: ./backend
+  api1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: api1
     environment:
-      NODE_ID: node2
-      PEERS: "node1:7000,node3:7000"
-      RAFT_PORT: 7000
-    ports:
-      - "8002:8000"
-      - "7002:7000"
-    volumes:
-      - node2_data:/srv/data
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bd_spd
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
 
-  node3:
-    build: ./backend
+  api2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: api2
     environment:
-      NODE_ID: node3
-      PEERS: "node1:7000,node2:7000"
-      RAFT_PORT: 7000
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bd_spd
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+
+  consumer:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    command: python consumer.py
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bd_spd
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+
+  redis:
+    image: redis:7
     ports:
-      - "8003:8000"
-      - "7003:7000"
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bd_spd
     volumes:
-      - node3_data:/srv/data
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
 volumes:
-  node1_data:
-  node2_data:
-  node3_data:
+  db-data:

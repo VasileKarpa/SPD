@@ -12,11 +12,11 @@ class Storage:
         while True:
             try:
                 self.conn = psycopg2.connect(
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD"),
-                    host=os.getenv("DB_HOST"),
-                    port=os.getenv("DB_PORT", 5432),
+                    dbname=os.getenv("POSTGRES_DB"),
+                    user=os.getenv("POSTGRES_USER"),
+                    password=os.getenv("POSTGRES_PASSWORD"),
+                    host=os.getenv("POSTGRES_HOST"),
+                    port=os.getenv("POSTGRES_PORT", 5432),
                 )
                 self.conn.autocommit = True
                 break
@@ -32,13 +32,19 @@ class Storage:
 
     def _ensure_table(self):
         with self.conn.cursor() as cur:
+            # verifica se a tabela existe
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS kv_store (
-                  key          TEXT      PRIMARY KEY,
-                  value        TEXT      NOT NULL,
-                  last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                );
-            """ )
+              SELECT to_regclass('public.kv_store');
+            """)
+            exists = cur.fetchone()[0]
+            if not exists:
+                cur.execute("""
+                  CREATE TABLE kv_store (
+                    key          TEXT      PRIMARY KEY,
+                    value        TEXT      NOT NULL,
+                    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                  );
+                """)
 
     def put(self, k: bytes, v: bytes):
         with self.conn.cursor() as cur:
@@ -63,6 +69,11 @@ class Storage:
     def delete(self, k: bytes):
         with self.conn.cursor() as cur:
             cur.execute("DELETE FROM kv_store WHERE key = %s", (k.decode(),))
+
+    def all(self):
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT key, value, last_updated FROM kv_store ORDER BY key;")
+            return cur.fetchall()
 
     def close(self):
         self.conn.close()

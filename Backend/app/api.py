@@ -1,77 +1,100 @@
-from pathlib import Path
+# backend/app/api.py
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from prometheus_client import Counter, Gauge, generate_latest
-from psycopg2.extras import RealDictCursor
+from datetime import datetime
+from pathlib import Path
+import os, json, redis, pika
 from .storage import Storage
+from typing import List, Dict
 
-# ──────────────────────────────── Instâncias globais ────────────────────────────────
 store = Storage()
-app   = FastAPI()
+app = FastAPI()
 
-REQ_COUNT = Counter("kv_requests_total", "Total de requisições", ["method"])
-IS_LEADER = Gauge("is_leader",       "É líder? 1=yes 0=no")
+# Inicialização de conexões
+redis_client = redis.Redis(
+    host=os.getenv("REDIS_HOST"),
+    port=int(os.getenv("REDIS_PORT"))
+)
 
-# ─────────────────────────── Middleware de métricas ────────────────────────────────
-@app.middleware("http")
-async def _metrics_mw(request: Request, call_next):
-    REQ_COUNT.labels(request.method).inc()
-    return await call_next(request)
+rabbit_conn = pika.BlockingConnection(
+    pika.ConnectionParameters(
+        host=os.getenv("RABBITMQ_HOST"),
+        port=int(os.getenv("RABBITMQ_PORT"))
+    )
+)
+channel = rabbit_conn.channel()
+channel.queue_declare(queue='add_key', durable=True)
+channel.queue_declare(queue='del_key', durable=True)
 
-# ───────────────────────────────── End-points /api ─────────────────────────────────
+# Modelo de dados
 class KVPair(BaseModel):
-    key:   str
+    key: str
     value: str
-
-@app.get("/api/health")
-async def health():
-    try:
-        with store.conn.cursor() as cur:
-            cur.execute("SELECT 1;")
-        return {"status": "ok"}
-    except Exception as exc:
-        raise HTTPException(500, f"Postgres error: {exc}")
-
-@app.get("/api/metrics")
-async def metrics():
-    IS_LEADER.set(0)
-    return generate_latest()
-
-@app.put("/api")
-async def put_value(kv: KVPair):
-    store.put(kv.key.encode(), kv.value.encode())
-    return {"status": "stored"}
 
 @app.get("/api")
 async def get_value(key: str):
+    # 1) Tenta no Redis
+    cached = redis_client.get(key)
+    if cached is not None:
+        decoded = cached.decode()
+        print(f"[GET] key={key!r} → {decoded!r} (fetched from Redis)")
+        return {"data": {"key": key, "value": decoded}, "source": "redis"}
+
+    # 2) Se não há cache, vai ao Postgres
     val = store.get(key.encode())
     if val is None:
-        raise HTTPException(404, "key not found")
-    return {"data": {"key": key, "value": val.decode()}}
+        print(f"[GET] key={key!r} → NOT FOUND (Postgres)")
+        raise HTTPException(status_code=404, detail="key not found")
+
+    decoded = val.decode()
+    # Popula o cache
+    redis_client.set(key, decoded)
+    print(f"[GET] key={key!r} → {decoded!r} (fetched from Postgres, then cached)")
+    return {"data": {"key": key, "value": decoded}, "source": "postgres"}
+
+
+@app.get("/api/all")
+async def list_all() -> Dict[str, List[Dict[str,str]]]:
+    # supondo que no Storage adicionaste um método .all()
+    rows = store.all()   # devia devolver List[{"key":str, "value":str, "last_updated":datetime}, …]
+    # podes filtrar só key/value:
+    data = [{"key": r["key"], "value": r["value"]} for r in rows]
+    return {"data": data}
+
+
+@app.put("/api")
+async def put_value(kv: KVPair):
+    payload = json.dumps({
+        "key_name": kv.key,
+        "key_value": kv.value,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+    channel.basic_publish(
+        exchange='',
+        routing_key='add_key',
+        body=payload,
+        properties=pika.BasicProperties(delivery_mode=2)
+    )
+    return {"status": "queued"}
 
 @app.delete("/api")
 async def delete_value(key: str):
-    if store.get(key.encode()) is None:
-        raise HTTPException(404, "key not found")
-    store.delete(key.encode())
-    return {"status": "deleted"}
+    payload = json.dumps({
+        "key_name": key,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+    channel.basic_publish(
+        exchange='',
+        routing_key='del_key',
+        body=payload,
+        properties=pika.BasicProperties(delivery_mode=2)
+    )
+    return {"status": "queued"}
 
-# ─────────────────────────── Servir front-end estático ────────────────────────────
-
-@app.get("/api/all")
-async def list_all():
-    try:
-        with store.conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT key, value FROM kv_store;")
-            rows = cur.fetchall()  # lista de dicts: [{"key": "...", "value": "..."}, ...]
-        return {"data": rows}
-    except Exception as exc:
-        raise HTTPException(500, f"Postgres error: {exc}")
-
-
+# Serve frontend estático
 app.mount(
     "/",
     StaticFiles(directory=str(Path(__file__).parent.parent / "frontend"), html=True),
-    name="frontend",
+    name="frontend"
 )
