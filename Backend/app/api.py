@@ -7,6 +7,7 @@ from pathlib import Path
 import os, json, redis, pika
 from .storage import Storage
 from typing import List, Dict
+from .publisher import publish
 
 store = Storage()
 app = FastAPI()
@@ -16,16 +17,6 @@ redis_client = redis.Redis(
     host=os.getenv("REDIS_HOST"),
     port=int(os.getenv("REDIS_PORT"))
 )
-
-rabbit_conn = pika.BlockingConnection(
-    pika.ConnectionParameters(
-        host=os.getenv("RABBITMQ_HOST"),
-        port=int(os.getenv("RABBITMQ_PORT"))
-    )
-)
-channel = rabbit_conn.channel()
-channel.queue_declare(queue='add_key', durable=True)
-channel.queue_declare(queue='del_key', durable=True)
 
 # Modelo de dados
 class KVPair(BaseModel):
@@ -70,12 +61,8 @@ async def put_value(kv: KVPair):
         "key_value": kv.value,
         "timestamp": datetime.utcnow().isoformat()
     })
-    channel.basic_publish(
-        exchange='',
-        routing_key='add_key',
-        body=payload,
-        properties=pika.BasicProperties(delivery_mode=2)
-    )
+
+    publish("add_key", payload)
     return {"status": "queued"}
 
 @app.delete("/api")
@@ -84,12 +71,8 @@ async def delete_value(key: str):
         "key_name": key,
         "timestamp": datetime.utcnow().isoformat()
     })
-    channel.basic_publish(
-        exchange='',
-        routing_key='del_key',
-        body=payload,
-        properties=pika.BasicProperties(delivery_mode=2)
-    )
+
+    publish("del_key", payload)
     return {"status": "queued"}
 
 # Serve frontend estático

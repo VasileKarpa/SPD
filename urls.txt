@@ -1,0 +1,1 @@
+http://localhost/api PUT {"key":"minha_chave","value":"123456789"}

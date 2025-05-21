@@ -69,9 +69,12 @@ conn = pika.BlockingConnection(
     pika.ConnectionParameters(
         host=os.getenv("RABBITMQ_HOST"),
         port=int(os.getenv("RABBITMQ_PORT")),
-        heartbeat=900
+        heartbeat=600,
+        blocked_connection_timeout=300
     )
 )
+
+
 ch = conn.channel()
 ch.queue_declare(queue='add_key', durable=True)
 ch.queue_declare(queue='del_key', durable=True)
