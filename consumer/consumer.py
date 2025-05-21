@@ -78,7 +78,7 @@ conn = pika.BlockingConnection(
 ch = conn.channel()
 ch.queue_declare(queue='add_key', durable=True)
 ch.queue_declare(queue='del_key', durable=True)
-ch.basic_qos(prefetch_count=1)
+ch.basic_qos(prefetch_count=50)
 ch.basic_consume(queue='add_key', on_message_callback=handle_add)
 ch.basic_consume(queue='del_key', on_message_callback=handle_del)
 

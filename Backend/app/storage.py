@@ -32,19 +32,13 @@ class Storage:
 
     def _ensure_table(self):
         with self.conn.cursor() as cur:
-            # verifica se a tabela existe
             cur.execute("""
-              SELECT to_regclass('public.kv_store');
-            """)
-            exists = cur.fetchone()[0]
-            if not exists:
-                cur.execute("""
-                  CREATE TABLE kv_store (
-                    key          TEXT      PRIMARY KEY,
-                    value        TEXT      NOT NULL,
-                    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                  );
-                """)
+                CREATE TABLE IF NOT EXISTS kv_store (
+                  key          TEXT      PRIMARY KEY,
+                  value        TEXT      NOT NULL,
+                  last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+            """ )
 
     def put(self, k: bytes, v: bytes):
         with self.conn.cursor() as cur:

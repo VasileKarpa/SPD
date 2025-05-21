@@ -1,0 +1,10 @@
+#ApacheBench 2.3
+#Instalar, caso nao tenha instalado:
+#1º -> sudo apt update
+#2º -> sudo apt install apache2-utils
+#Comando terminal para executar testes de carga, simulando um sistema real:
+#c = numero de clientes
+#r = numero de requisitos (numero de PUTs / DELETEs)
+#urls.txt = ficheiro que tem o par chave-valor + endereço do localhost
+
+ab -p body.txt -T "application/json" -c 100 -n 200 -m PUT http://localhost/api
