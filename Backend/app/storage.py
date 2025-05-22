@@ -29,8 +29,6 @@ class Storage:
                 # Aguarda antes da próxima tentativa
                 time.sleep(2)
 
-
-
     def put(self, k: bytes, v: bytes):
         with self.conn.cursor() as cur:
             cur.execute(
