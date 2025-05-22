@@ -54,9 +54,10 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 ## 🏛️ Diagrama de arquitetura do sistema
 
 <p align="left">
-  <img src="assets/diagrama_arquitetura.jpg" width="600" alt="diagrama_arquitetura.jpg">
+  <img src="assets/diagrama_arquitetura.jpg" width="500" alt="diagrama_arquitetura.jpg">
 </p>
 
+- **Mais detalhes**:Ver [Sistemas_Distribuidos.pdf](Sistemas_Distribuidos.pdf) ("Implementações avaliadas - pag. 10")
 ---
 
 ## 🛠️ Pré-requisitos
@@ -143,58 +144,65 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 > **⚠️ Aviso:** se não for enviada nenhuma mensagem (nem heartbeats nem outra frame) durante **600 s**, a conexão com o RabbitMQ será encerrada e **será necessário reiniciar o container**.
 
 ---
-
-## 📋 Exemplos de uso pelo terminal, em caso da interface http://localhost/ apresentar algum erro:
-
+## 💻 Demo Terminal (em caso da interface http://localhost/ apresentar algum erro)
+- **Put**: 
+Para inserir um par chave-valor no terminal utilize curl -X PUT http://localhost/api -H "Content-Type: application/json" -d '{"key":"minha_chave","value":"123"}' e obterá de imediato {"status":"queued"} com código HTTP 200 OK, indicando que a operação foi enfileirada; pode confirmar no pgAdmin4 ou em psql com SELECT * FROM kv_store; e verificar que a chave foi inserida.
 1. Gravar um par chave-valor
    ```bash
    curl -X PUT http://localhost/api -H "Content-Type: application/json" -d '{"key":"minha_chave","value":"123"}'
 
+- **Delete**: 
+Para eliminar o par utilize curl -X DELETE http://localhost/api?key=minha_chave, que também retornará {"status":"queued"} com HTTP 200 OK, e depois confirme que a linha foi removida na tabela kv_store.
 2. Eliminar um par chave-valor
    ```bash
    curl -X DELETE http://localhost/api?key=minha_chave
 
+- **Get**: 
+Para ler o valor dessa chave use curl http://localhost/api?key=minha_chave e receberá {"data":{"key":"minha_chave","value":"123"},"source":"postgres"} (ou "redis" se tiver cache), mostrando de onde veio a resposta.
 3. Ler um par chave-valor
    ```bash
    curl http://localhost/api?key=minha_chave
 
+- **List**: 
+Por fim, para listar todos os pares armazenados use curl http://localhost/api/all, que devolverá {"data":[{"key":"outra_chave","value":"abc"},…]}, e pode novamente comparar com o conteúdo da tabela no pgAdmin4 ou via psql.
 4. Listar todos os pares chave-valor
    ```bash
    curl http://localhost/api/all
 
 ---
 
-## 💻 Demo Terminal
-
----
-
----
-
 ## 🌐 Demo Frontend
-- **Put**: Para inserir um novo par chave-valor através do frontend basta digitar no formulário o nome da chave e o valor (ambos strings) e clicar em “Salvar”. O frontend envia então uma requisição PUT para /api com um corpo JSON contendo os campos key e value, e devolve de imediato um HTTP 200 OK com {"status":"queued"}, indicando que a operação foi enfileirada no RabbitMQ. Um serviço consumidor retira em background essa mensagem da fila add_key e executa o INSERT ou UPDATE na tabela kv_store do PostgreSQL (atualizando também o cache Redis, se existir). Por fim, para confirmar que a inserção decorreu com sucesso, abra o pgAdmin4 (ou ligue-se via psql) à base de dados bd_spd e consulte a tabela kv_store – se encontrar a linha com a chave e o valor indicados, significa que o par foi efetivamente gravado.
-<p align="left">
+- **Put**: 
+Para inserir um novo par chave-valor através do frontend basta digitar no formulário o nome da chave e o valor (ambos strings) e clicar em “Salvar”. O frontend envia então uma requisição PUT para /api com um corpo JSON contendo os campos key e value, e devolve de imediato um HTTP 200 OK com {"status":"queued"}, indicando que a operação foi enfileirada no RabbitMQ. Um serviço consumidor retira em background essa mensagem da fila add_key e executa o INSERT ou UPDATE na tabela kv_store do PostgreSQL (atualizando também o cache Redis, se existir). Por fim, para confirmar que a inserção decorreu com sucesso, abra o pgAdmin4 (ou ligue-se via psql) à base de dados bd_spd e consulte a tabela kv_store – se encontrar a linha com a chave e o valor indicados, significa que o par foi efetivamente gravado.
+<p align="center">
   <img src="assets/put.jpg" width="600" alt="put.jpg">
 </p>
 
-- **Get**: Para efetuar uma leitura (GET) de um par chave-valor, basta introduzir o nome da chave no campo de pesquisa e premir “Pesquisar”. O frontend envia imediatamente uma requisição GET para /api?key=<nome_da_chave>; se o valor estiver no cache Redis, recebe de imediato HTTP 200 OK com {"data":{"key":"<nome_da_chave>","value":"<valor>"},"source":"redis"}; em caso de cache miss, a API vai ao PostgreSQL, retorna o valor e guarda-o no Redis para consultas futuras, respondendo também com HTTP 200 OK e "source":"postgres". Para confirmar, abra o pgAdmin4 (ou use psql) e verifique se a linha existe na tabela kv_store ou volte a fazer GET para a mesma chave e observe "source":"redis" no resultado.
-<p align="left">
+- **Get**: 
+Para efetuar uma leitura (GET) de um par chave-valor, basta introduzir o nome da chave no campo de pesquisa e premir “Pesquisar”. O frontend envia imediatamente uma requisição GET para /api?key=<nome_da_chave>; se o valor estiver no cache Redis, recebe de imediato HTTP 200 OK com {"data":{"key":"<nome_da_chave>","value":"<valor>"},"source":"redis"}; em caso de cache miss, a API vai ao PostgreSQL, retorna o valor e guarda-o no Redis para consultas futuras, respondendo também com HTTP 200 OK e "source":"postgres". Para confirmar, abra o pgAdmin4 (ou use psql) e verifique se a linha existe na tabela kv_store ou volte a fazer GET para a mesma chave e observe "source":"redis" no resultado.
+<p align="center">
   <img src="assets/get_1.jpg" width="600" alt="get_1.jpg">
 </p>
 
-<p align="left">
+<p align="center">
   <img src="assets/get_2.jpg" width="600" alt="get_2.jpg">
 </p>
 
-- **Delete**: Para eliminar um par chave-valor, escreva o nome da chave no campo correspondente e clique em “Eliminar”. O frontend dispara uma requisição DELETE para /api?key=<nome_da_chave> e devolve de imediato HTTP 200 OK com {"status":"queued"}, sinalizando que a operação foi enfileirada em del_key. O consumidor processa essa mensagem em background, remove a entrada da tabela kv_store no PostgreSQL e invalida a chave no Redis. Para verificar a exclusão, recorra ao pgAdmin4 (ou psql) e confirme que a linha já não está presente, ou faça um GET para essa chave e receba HTTP 404 Not Found.
-<p align="left">
+- **Delete**: 
+Para eliminar um par chave-valor, escreva o nome da chave no campo correspondente e clique em “Eliminar”. O frontend dispara uma requisição DELETE para /api?key=<nome_da_chave> e devolve de imediato HTTP 200 OK com {"status":"queued"}, sinalizando que a operação foi enfileirada em del_key. O consumidor processa essa mensagem em background, remove a entrada da tabela kv_store no PostgreSQL e invalida a chave no Redis. Para verificar a exclusão, recorra ao pgAdmin4 (ou psql) e confirme que a linha já não está presente, ou faça um GET para essa chave e receba HTTP 404 Not Found.
+<p align="center">
   <img src="assets/delete.jpg" width="600" alt="delete.jpg">
 </p>
 
-<p align="left">
+<p align="center">
   <img src="assets/delete_confirmation.jpg" width="600" alt="delete_confirmation.jpg">
 </p>
 
-- **List**:
+- **List**: 
+Para listar todos os pares chave-valor, basta carregar no botão “Listar tudo” no frontend, que envia uma única requisição GET para /api/all; a API responderá com status 200 OK e um JSON contendo o array de objetos com cada key e value, e o frontend renderiza imediatamente essa lista (por exemplo, numa tabela), pelo que, para confirmar, pode igualmente abrir o pgAdmin4 ou usar psql com SELECT * FROM kv_store; e verificar que os resultados no banco coincidem com os apresentados.
+<p align="center">
+  <img src="assets/list.jpg" width="400" alt="list.jpg">
+</p>
 
 ---
 
@@ -210,6 +218,9 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 
 - 1 000 000 de pedidos sem perda de mensagens (com basic_qos(prefetch_count=50)).
 - Tempo de processamento reduzido de 45min para 7min após optimização de conexões.
+<p align="left">
+  <img src="assets/teste_carga_million.jpg" width="400" alt="teste_carga_million.jpg">
+</p>
 
 ---
 
