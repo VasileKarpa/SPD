@@ -136,7 +136,7 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 
 ---
 
-## 📋 Exemplos de uso, pelo terminal em caso da interface em: http://localhost/ apresentar algum erro:
+## 📋 Exemplos de uso pelo terminal, em caso da interface http://localhost/ apresentar algum erro:
 
 1. Gravar um par chave-valor
    ```bash

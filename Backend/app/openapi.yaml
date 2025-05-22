@@ -1,0 +1,125 @@
+openapi: 3.0.1
+info:
+  title: Key-Value Store API
+  version: v1.0.0
+  description: |
+    API para armazenar e recuperar pares chave-valor num sistema distribuído
+servers:
+  - url: http://localhost
+    description: URL base (Nginx)
+paths:
+  /api:
+    get:
+      summary: Obter valor por chave
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Chave que se pretende ler
+      responses:
+        '200':
+          description: Valor encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                      value:
+                        type: string
+                  source:
+                    type: string
+                    enum: [redis, postgres]
+        '404':
+          description: Chave não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Inserir ou actualizar valor
+      requestBody:
+        description: Par chave-valor a adicionar/atualizar
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KVPair'
+      responses:
+        '200':
+          description: Operação enfileirada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: queued
+    delete:
+      summary: Eliminar valor por chave
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Chave a remover
+      responses:
+        '200':
+          description: Operação enfileirada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: queued
+
+  /api/all:
+    get:
+      summary: Listar todas as chaves e valores
+      responses:
+        '200':
+          description: Lista de pares chave-valor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        value:
+                          type: string
+
+components:
+  schemas:
+    KVPair:
+      type: object
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          description: Chave
+        value:
+          type: string
+          description: Valor
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
