@@ -47,7 +47,7 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
    - Tabela `kv_store(key TEXT PRIMARY KEY, value TEXT, last_updated TIMESTAMP)`  
 
 6. **Nginx**  
-   - Proxy reverso e balanceamento de carga entre `api1` e `api2`  
+   - Proxy reverso e balanço/gestao de carga entre `api1` e `api2`  
 
 ---
 
@@ -55,7 +55,7 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 
 - Docker & Docker Compose  
 - Make  
-- git instalado
+- git
 - (Opcional) `siege` ou `ab` para testes de carga  
 
 ---
