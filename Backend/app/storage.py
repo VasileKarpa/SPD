@@ -28,24 +28,8 @@ class Storage:
                     raise
                 # Aguarda antes da próxima tentativa
                 time.sleep(2)
-        # Garante que a tabela existe
-        self._ensure_table()
 
-    def _ensure_table(self):
-        with self.conn.cursor() as cur:
-            try:
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS kv_store (
-                      key          TEXT      PRIMARY KEY,
-                      value        TEXT      NOT NULL,
-                      last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-                """ )
-            except Error as e:
-                # se for erro de tipo duplicado, ignora; senão repropaga
-                if 'pg_type_typname_nsp_index' in str(e):
-                    return
-                raise
+
 
     def put(self, k: bytes, v: bytes):
         with self.conn.cursor() as cur:
