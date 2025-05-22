@@ -42,7 +42,8 @@ services:
       dockerfile: Dockerfile
     container_name: api1
     volumes:
-      - ./frontend:/srv/frontend      # monta o frontend no container
+      - ./frontend:/srv/frontend
+      - ./backend/app/openapi.yaml:/srv/app/openapi.yaml:ro
     environment:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
@@ -68,6 +69,7 @@ services:
     container_name: api2
     volumes:
       - ./frontend:/srv/frontend
+      - ./backend/app/openapi.yaml:/srv/app/openapi.yaml:ro
     environment:
       REDIS_HOST: redis
       REDIS_PORT: "6379"

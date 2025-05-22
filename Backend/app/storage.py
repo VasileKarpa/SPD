@@ -4,6 +4,7 @@ import time
 import psycopg2
 from psycopg2 import OperationalError
 from psycopg2.extras import RealDictCursor
+from psycopg2 import Error
 
 class Storage:
     def __init__(self):
@@ -32,13 +33,19 @@ class Storage:
 
     def _ensure_table(self):
         with self.conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS kv_store (
-                  key          TEXT      PRIMARY KEY,
-                  value        TEXT      NOT NULL,
-                  last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                );
-            """ )
+            try:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS kv_store (
+                      key          TEXT      PRIMARY KEY,
+                      value        TEXT      NOT NULL,
+                      last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                """ )
+            except Error as e:
+                # se for erro de tipo duplicado, ignora; senão repropaga
+                if 'pg_type_typname_nsp_index' in str(e):
+                    return
+                raise
 
     def put(self, k: bytes, v: bytes):
         with self.conn.cursor() as cur:

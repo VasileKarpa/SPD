@@ -8,9 +8,11 @@ import os, json, redis, pika
 from .storage import Storage
 from typing import List, Dict
 from .publisher import publish
+from fastapi.openapi.utils import get_openapi
+import yaml
 
 store = Storage()
-app = FastAPI()
+app = FastAPI(title="Key-Value Service", docs_url="/docs", redoc_url="/redoc", openapi_url="/openapi.json")
 
 # Inicialização de conexões
 redis_client = redis.Redis(
@@ -22,6 +24,12 @@ redis_client = redis.Redis(
 class KVPair(BaseModel):
     key: str
     value: str
+
+@app.on_event("startup")
+def load_openapi():
+    with open("openapi.yaml", "r") as f:
+        app.openapi_schema = yaml.safe_load(f)
+
 
 @app.get("/api")
 async def get_value(key: str):

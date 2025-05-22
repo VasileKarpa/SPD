@@ -12,6 +12,8 @@ COPY requirements.txt .
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
+COPY app/openapi.yaml ./openapi.yaml
+
 # copia o código do backend
 COPY . .
 

@@ -159,7 +159,7 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 ## 🧪 Testes de carga
 - **Siege**: Ver o ficheiro [commands_siege.txt](commands_siege.txt)
 - **ApacheBench**: Ver o ficheiro [commands_ab.txt](commands_ab.txt)
-
+- **RabitMQ**: Pode ver e gerir em tempo real praticamente tudo o que se passa no broker: http://localhost:15672/#/
 ---
 
 ## 🚀 Resultados típicos para grandes testes de carga:
