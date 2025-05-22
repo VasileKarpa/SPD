@@ -51,6 +51,14 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 
 ---
 
+## 🏛️ Diagrama de arquitetura do sistema
+
+<p align="left">
+  <img src="assets/diagrama_arquitetura.jpg" width="600" alt="diagrama_arquitetura.jpg">
+</p>
+
+---
+
 ## 🛠️ Pré-requisitos
 
 - Docker & Docker Compose  
@@ -156,10 +164,46 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 
 ---
 
+## 💻 Demo Terminal
+
+---
+
+---
+
+## 🌐 Demo Frontend
+- **Put**: Para inserir um novo par chave-valor através do frontend basta digitar no formulário o nome da chave e o valor (ambos strings) e clicar em “Salvar”. O frontend envia então uma requisição PUT para /api com um corpo JSON contendo os campos key e value, e devolve de imediato um HTTP 200 OK com {"status":"queued"}, indicando que a operação foi enfileirada no RabbitMQ. Um serviço consumidor retira em background essa mensagem da fila add_key e executa o INSERT ou UPDATE na tabela kv_store do PostgreSQL (atualizando também o cache Redis, se existir). Por fim, para confirmar que a inserção decorreu com sucesso, abra o pgAdmin4 (ou ligue-se via psql) à base de dados bd_spd e consulte a tabela kv_store – se encontrar a linha com a chave e o valor indicados, significa que o par foi efetivamente gravado.
+<p align="left">
+  <img src="assets/put.jpg" width="600" alt="put.jpg">
+</p>
+
+- **Get**: Para efetuar uma leitura (GET) de um par chave-valor, basta introduzir o nome da chave no campo de pesquisa e premir “Pesquisar”. O frontend envia imediatamente uma requisição GET para /api?key=<nome_da_chave>; se o valor estiver no cache Redis, recebe de imediato HTTP 200 OK com {"data":{"key":"<nome_da_chave>","value":"<valor>"},"source":"redis"}; em caso de cache miss, a API vai ao PostgreSQL, retorna o valor e guarda-o no Redis para consultas futuras, respondendo também com HTTP 200 OK e "source":"postgres". Para confirmar, abra o pgAdmin4 (ou use psql) e verifique se a linha existe na tabela kv_store ou volte a fazer GET para a mesma chave e observe "source":"redis" no resultado.
+<p align="left">
+  <img src="assets/get_1.jpg" width="600" alt="get_1.jpg">
+</p>
+
+<p align="left">
+  <img src="assets/get_2.jpg" width="600" alt="get_2.jpg">
+</p>
+
+- **Delete**: Para eliminar um par chave-valor, escreva o nome da chave no campo correspondente e clique em “Eliminar”. O frontend dispara uma requisição DELETE para /api?key=<nome_da_chave> e devolve de imediato HTTP 200 OK com {"status":"queued"}, sinalizando que a operação foi enfileirada em del_key. O consumidor processa essa mensagem em background, remove a entrada da tabela kv_store no PostgreSQL e invalida a chave no Redis. Para verificar a exclusão, recorra ao pgAdmin4 (ou psql) e confirme que a linha já não está presente, ou faça um GET para essa chave e receba HTTP 404 Not Found.
+<p align="left">
+  <img src="assets/delete.jpg" width="600" alt="delete.jpg">
+</p>
+
+<p align="left">
+  <img src="assets/delete_confirmation.jpg" width="600" alt="delete_confirmation.jpg">
+</p>
+
+- **List**:
+
+---
+
 ## 🧪 Testes de carga
 - **Siege**: Ver o ficheiro [commands_siege.txt](commands_siege.txt)
 - **ApacheBench**: Ver o ficheiro [commands_ab.txt](commands_ab.txt)
 - **RabitMQ**: Pode ver e gerir em tempo real praticamente tudo o que se passa no broker: http://localhost:15672/#/
+- **Mais dados**:Ver [Sistemas_Distribuidos.pdf](Sistemas_Distribuidos.pdf) ("Discussão de Resultads - pag. 15")
+
 ---
 
 ## 🚀 Resultados típicos para grandes testes de carga:
