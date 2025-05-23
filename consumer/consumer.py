@@ -69,7 +69,7 @@ conn = pika.BlockingConnection(
     pika.ConnectionParameters(
         host=os.getenv("RABBITMQ_HOST"),
         port=int(os.getenv("RABBITMQ_PORT")),
-        heartbeat=600,
+        heartbeat=0,
         blocked_connection_timeout=300
     )
 )

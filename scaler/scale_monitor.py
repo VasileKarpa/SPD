@@ -2,7 +2,7 @@
 import psutil, time, os, subprocess
 
 # percentagem de RAM a partir da qual escalamos
-THRESHOLD = 70
+THRESHOLD = 5
 # nome do serviço a escalar (tal como no docker-compose)
 SERVICE = "api"
 # passo de escala

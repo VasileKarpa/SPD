@@ -124,5 +124,19 @@ services:
       - api1
       - api2
 
+  scaler:
+    build:
+      context: ./scaler
+      dockerfile: Dockerfile
+    container_name: scaler
+    volumes:
+      # precisamos do socket para controlar o docker host
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - api1
+      - api2
+    # reinicia caso falhe
+    restart: always
+
 volumes:
   db-data:

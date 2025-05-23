@@ -1,3 +1,14 @@
+## Índice
+
+1. [Sistema Distribuído de Armazenamento de Pares Chave-Valor](#Sistema Distribuído de Armazenamento de Pares Chave-Valor)  
+2. [Instalação](#instalação)  
+3. [Uso em Cloud](#uso-em-cloud)  
+4. [Arquitetura](#arquitetura)  
+5. [Testes de Carga](#testes-de-carga)  
+6. [Conclusão](#conclusão)  
+7. [📄 Licença](#Licença)  
+
+
 # Sistema Distribuído de Armazenamento de Pares Chave-Valor
 
 Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em micro-serviços orquestrados por Docker Compose. Inclui:
@@ -66,6 +77,7 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 - Make  
 - git
 - (Opcional) `siege` ou `ab` para testes de carga  
+- (Opcional) Em Windows, instalar Ubuntu
 
 ---
 
@@ -91,7 +103,7 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 
 5. Espere o build acabar, e aceda à interface em: http://localhost/
 
-> **⚠️ Aviso:** se não for enviada nenhuma mensagem (nem heartbeats nem outra frame) durante **600 s**, a conexão com o RabbitMQ será encerrada e **será necessário reiniciar o container**.
+> **Para mais detalhes** ver [Sistemas_Distribuidos.pdf](Sistemas_Distribuidos.pdf) ("Automação e reprodutibilidade - pag. 10").
 
 ---
 
@@ -118,7 +130,7 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 
 5. Espere o build acabar, e aceda à interface em: http://localhost/
 
-> **⚠️ Aviso:** se não for enviada nenhuma mensagem (nem heartbeats nem outra frame) durante **600 s**, a conexão com o RabbitMQ será encerrada e **será necessário reiniciar o container**.
+> **Para mais detalhes** ver [Sistemas_Distribuidos.pdf](Sistemas_Distribuidos.pdf) ("Automação e reprodutibilidade - pag. 10").
 
 ---
 
@@ -141,9 +153,19 @@ Um sistema distribuído de leitura e escrita de pares chave-valor, baseado em mi
 
 4. Espere o build acabar, e aceda à interface em: http://localhost/
 
-> **⚠️ Aviso:** se não for enviada nenhuma mensagem (nem heartbeats nem outra frame) durante **600 s**, a conexão com o RabbitMQ será encerrada e **será necessário reiniciar o container**.
+> **Para mais detalhes** ver [Sistemas_Distribuidos.pdf](Sistemas_Distribuidos.pdf) ("Automação e reprodutibilidade - pag. 10").
 
 ---
+
+## ☁️ Instalação e uso em cloud e standalone
+- **Este projeto** pode ser executado tanto em ambiente standalone (no seu PC de desenvolvimento Windows, macOS ou Linux) como em qualquer cloud provider (Google Cloud, AWS, Azure, DigitalOcean, …), desde que disponha de uma máquina virtual (VM) com Docker e Docker Compose instalados.
+
+- **Implantação em ambiente cloud e criação da VM :** Escolha o seu provider (GCP, AWS, Azure, DigitalOcean…). Crie uma instância com SO Linux (Ubuntu/Debian) ou Windows Server. Garanta que tem pelo menos 2 vCPUs e 4 GB RAM para testes leves (ou mais para cargas elevadas).
+
+- **Configurar a VM :** Abra SSH (Linux/macOS) ou RDP/PowerShell remota (Windows). Os restantes passos e pré-requisitos (instalação do Docker, Docker Compose, Makefile ou start.sh, clonagem do repositório e comandos de arranque) já foram descritos anteriormente (acima) para os ambientes Windows e Linux.
+
+---
+
 ## 💻 Demo Terminal (em caso da interface http://localhost/ apresentar algum erro)
 - **Put**: 
 Para inserir um par chave-valor no terminal utilize curl -X PUT http://localhost/api -H "Content-Type: application/json" -d '{"key":"minha_chave","value":"123"}' e obterá de imediato {"status":"queued"} com código HTTP 200 OK, indicando que a operação foi enfileirada; pode confirmar no pgAdmin4 ou em psql com SELECT * FROM kv_store; e verificar que a chave foi inserida.
@@ -206,11 +228,32 @@ Para listar todos os pares chave-valor, basta carregar no botão “Listar tudo�
 
 ---
 
-## 🧪 Testes de carga
-- **Siege**: Ver o ficheiro [commands_siege.txt](commands_siege.txt)
-- **ApacheBench**: Ver o ficheiro [commands_ab.txt](commands_ab.txt)
-- **RabitMQ**: Pode ver e gerir em tempo real praticamente tudo o que se passa no broker: http://localhost:15672/#/
-- **Mais dados**:Ver [Sistemas_Distribuidos.pdf](Sistemas_Distribuidos.pdf) ("Discussão de Resultads - pag. 15")
+## 🧪 Testes de carga com siege e build sem print de logs (modo detached) vs com print de logs
+- **Siege**: Ver o ficheiro [commands_siege.txt](siege/commands_siege.txt)
+- **Resultados sem print de logs**: Em apenas cerca de 11min (693,86 segundos) foram processadas 1 632 000 requisições com o Siege, mantendo 0 perdas de dados, o que traduz um throughput médio de cerca de 2 351 req/s. Estes resultados assentam em vários factores de optimização: as APIs correm em modo detached (docker compose up -d), eliminando o overhead de I/O de logs em tempo real; o basic_qos(prefetch_count=50) no consumidor garante elevado débito sem riscos de mensagem perdida; as ligações ao RabbitMQ e ao PostgreSQL são reutilizadas, evitando o custo de abrir e fechar conexões a cada operação; e a estratégia cache-aside com Redis (no caso do get) reduz drasticamente a latência das leituras repetidas. No seu conjunto, estas escolhas permitem ao sistema escalar de forma linear sob cargas massivas, mantendo latências controladas e fiabilidade total, exemplo de grafico na figura da esquerda.
+---
+- **Resultados com print de logs**: Em apenas cerca de 11min (693,86 segundos) foram processadas 1 632 000 requisições com o Siege, mantendo 0 perdas de dados, o que traduz um throughput médio de cerca de 2 351 req/s. Estes resultados assentam em vários factores de optimização: as APIs correm em modo detached (docker compose up -d), eliminando o overhead de I/O de logs em tempo real; o basic_qos(prefetch_count=50) no consumidor garante elevado débito sem riscos de mensagem perdida; as ligações ao RabbitMQ e ao PostgreSQL são reutilizadas, evitando o custo de abrir e fechar conexões a cada operação; e a estratégia cache-aside com Redis (no caso do get) reduz drasticamente a latência das leituras repetidas. No seu conjunto, estas escolhas permitem ao sistema escalar de forma linear sob cargas massivas, mantendo latências controladas e fiabilidade total, exemplo de grafico na figura da direita.
+
+<p align="center">
+  <img src="assets/siege_com_d.jpg" width="400" alt="siege_com_d.jpg">, <img src="assets/siege_com_d.jpg" width="400" alt="siege_com_d.jpg">,
+</p>
+
+## 💉 Testes de carga com ab e build sem print de logs (modo detached) vs com print de logs
+- **ApacheBench**: Ver o ficheiro [commands_ab.txt](ab/commands_ab.txt)
+- **Resultados sem print de logs**: Em cerca de 12min (727,89 segundos) o ApacheBench processou 1 632 000 requisições com 255 clientes concorrentes, mantendo 0 perdas de dados, o que corresponde a um throughput médio de aproximadamente 2 241 requisições por segundo. Estes resultados foram alcançados graças a várias otimizações: as APIs foram executadas em modo detached (docker compose up -d), eliminando o overhead de I/O associado ao streaming de logs em tempo real; foi configurado basic_qos(prefetch_count=50) no consumidor para maximizar o débito sem comprometer a fiabilidade das mensagens; as ligações TCP ao RabbitMQ e ao PostgreSQL são mantidas abertas e reutilizadas, evitando custos de estabelecimento de conexão em cada operação; e a estratégia cache-aside com Redis (no caso do get) aliviou significativamente a carga de leituras no PostgreSQL, reduzindo as latências. Em conjunto, estes fatores permitem ao sistema lidar com elevados níveis de concorrência mantendo a latência sob controlo e garantindo 100 % de consistência dos dados, exemplo de grafico na figura da esquerda.
+
+- **Resultados com print de logs**: Em apenas cerca de 12min (693,86 segundos) foram processadas 1 632 000 requisições com o Siege, mantendo 0 perdas de dados, o que traduz um throughput médio de cerca de 2 351 req/s. Estes resultados assentam em vários factores de optimização: as APIs correm em modo detached (docker compose up -d), eliminando o overhead de I/O de logs em tempo real; o basic_qos(prefetch_count=50) no consumidor garante elevado débito sem riscos de mensagem perdida; as ligações ao RabbitMQ e ao PostgreSQL são reutilizadas, evitando o custo de abrir e fechar conexões a cada operação; e a estratégia cache-aside com Redis (no caso do get) reduz drasticamente a latência das leituras repetidas. No seu conjunto, estas escolhas permitem ao sistema escalar de forma linear sob cargas massivas, mantendo latências controladas e fiabilidade total, exemplo de grafico na figura da direita.
+
+<p align="center">
+  <img src="assets/ab_com_d.jpg" width="400" alt="siege_com_d.jpg">, <img src="assets/siege_com_d.jpg" width="400" alt="siege_com_d.jpg">,
+</p>
+
+---
+
+## 📝 Nota Importante 
+Durante os testes de carga verificámos que executar o sistema em modo “foreground” (i.e. **docker compose up** sem -d) introduz um overhead de I/O que impacta diretamente o desempenho. Cada log enviado para o terminal—print()s da aplicação, mensagens do Nginx, UVicorn e RabbitMQ—obriga a múltiplas operações de flush, parsing e formatação, consumindo CPU e I/O de disco. Quando geramos centenas ou milhares de logs por segundo, o próprio terminal se torna um fator limitador, impondo throttling e constantes sincronizações de buffer para não perder saída, o que retarda significativamente o processamento de pedidos.
+
+Em contrapartida, ao usar **docker compose up -d**, os containers correm em background sem despejar logs para o terminal, eliminando esse overhead de I/O. Nos nossos benchmarks, isso traduziu-se em throughput muito mais elevado e latências menores — prova de que a forma como gerimos o logging é um factor crítico a ter em conta em cenários de alta carga.
 
 ---
 
@@ -218,6 +261,9 @@ Para listar todos os pares chave-valor, basta carregar no botão “Listar tudo�
 
 - 1 000 000 de pedidos sem perda de mensagens (com basic_qos(prefetch_count=50)).
 - Tempo de processamento reduzido de 45min para 7min após optimização de conexões.
+- **RabitMQ**: Pode ver e gerir em tempo real praticamente tudo o que se passa no broker: http://localhost:15672/#/
+- **Mais dados**:Ver [Sistemas_Distribuidos.pdf](Sistemas_Distribuidos.pdf) ("Discussão de Resultads - pag. 15")
+
 <p align="left">
   <img src="assets/teste_carga_million.jpg" width="400" alt="teste_carga_million.jpg">
 </p>

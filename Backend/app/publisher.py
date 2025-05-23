@@ -6,7 +6,7 @@ from pika import BasicProperties
 _params = pika.ConnectionParameters(
     host=os.getenv("RABBITMQ_HOST"),
     port=int(os.getenv("RABBITMQ_PORT")),
-    heartbeat=600,               # heartbeat alongado
+    heartbeat=0,               # heartbeat alongado
     blocked_connection_timeout=300
 )
 _conn = pika.BlockingConnection(_params)
