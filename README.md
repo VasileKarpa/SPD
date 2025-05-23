@@ -2,11 +2,21 @@
 
 1. [Sistema Distribuído de Armazenamento de Pares Chave-Valor](#Sistema Distribuído de Armazenamento de Pares Chave-Valor)  
 2. [Instalação](#instalação)  
-3. [Uso em Cloud](#uso-em-cloud)  
-4. [Arquitetura](#arquitetura)  
-5. [Testes de Carga](#testes-de-carga)  
-6. [Conclusão](#conclusão)  
-7. [📄 Licença](#Licença)  
+2. [Instalação](#instalação) 
+2. [Instalação](#instalação) 
+2. [Instalação](#instalação) 
+2. [Instalação](#instalação) 
+2. [Instalação](#instalação) 
+2. [Instalação](#instalação) 
+2. [Instalação](#instalação) 
+2. [Instalação](#instalação) 
+2. [🌐 Demo Frontend](#frontend) 
+3. [🧪 Testes de carga com siege e build sem print de logs (modo detached) vs com print de logs](#siege)  
+4. [💉 Testes de carga com ab e build sem print de logs (modo detached) vs com print de logs](#ab)  
+5. [📝 Nota Importante dos testes de carga](#nota)  
+6. [🚀 Resultados típicos para grandes testes de carga](#resultados)  
+7. [📄 Licença](#licenca)
+
 
 
 # Sistema Distribuído de Armazenamento de Pares Chave-Valor
@@ -193,7 +203,8 @@ Por fim, para listar todos os pares armazenados use curl http://localhost/api/al
 
 ---
 
-## 🌐 Demo Frontend
+<h2 id="frontend">🌐 Demo Frontend</h2>
+
 - **Put**: 
 Para inserir um novo par chave-valor através do frontend basta digitar no formulário o nome da chave e o valor (ambos strings) e clicar em “Salvar”. O frontend envia então uma requisição PUT para /api com um corpo JSON contendo os campos key e value, e devolve de imediato um HTTP 200 OK com {"status":"queued"}, indicando que a operação foi enfileirada no RabbitMQ. Um serviço consumidor retira em background essa mensagem da fila add_key e executa o INSERT ou UPDATE na tabela kv_store do PostgreSQL (atualizando também o cache Redis, se existir). Por fim, para confirmar que a inserção decorreu com sucesso, abra o pgAdmin4 (ou ligue-se via psql) à base de dados bd_spd e consulte a tabela kv_store – se encontrar a linha com a chave e o valor indicados, significa que o par foi efetivamente gravado.
 <p align="center">
@@ -228,7 +239,8 @@ Para listar todos os pares chave-valor, basta carregar no botão “Listar tudo�
 
 ---
 
-## 🧪 Testes de carga com siege e build sem print de logs (modo detached) vs com print de logs
+<h2 id="siege">🧪 Testes de carga com siege e build sem print de logs (modo detached) vs com print de logs</h2>
+
 - **Siege**: Ver o ficheiro [commands_siege.txt](siege/commands_siege.txt)
 - **Resultados sem print de logs**: Em apenas cerca de 11min (693,86 segundos) foram processadas 1 632 000 requisições com o Siege, mantendo 0 perdas de dados, o que traduz um throughput médio de cerca de 2 351 req/s. Estes resultados assentam em vários factores de optimização: as APIs correm em modo detached (docker compose up -d), eliminando o overhead de I/O de logs em tempo real; o basic_qos(prefetch_count=50) no consumidor garante elevado débito sem riscos de mensagem perdida; as ligações ao RabbitMQ e ao PostgreSQL são reutilizadas, evitando o custo de abrir e fechar conexões a cada operação; e a estratégia cache-aside com Redis (no caso do get) reduz drasticamente a latência das leituras repetidas. No seu conjunto, estas escolhas permitem ao sistema escalar de forma linear sob cargas massivas, mantendo latências controladas e fiabilidade total, exemplo de grafico na figura da esquerda.
 ---
@@ -238,7 +250,10 @@ Para listar todos os pares chave-valor, basta carregar no botão “Listar tudo�
   <img src="assets/siege_com_d.jpg" width="400" alt="siege_com_d.jpg">, <img src="assets/siege_com_d.jpg" width="400" alt="siege_com_d.jpg">,
 </p>
 
-## 💉 Testes de carga com ab e build sem print de logs (modo detached) vs com print de logs
+---
+
+<h2 id="ab">💉 Testes de carga com ab e build sem print de logs (modo detached) vs com print de logs</h2>
+
 - **ApacheBench**: Ver o ficheiro [commands_ab.txt](ab/commands_ab.txt)
 - **Resultados sem print de logs**: Em cerca de 12min (727,89 segundos) o ApacheBench processou 1 632 000 requisições com 255 clientes concorrentes, mantendo 0 perdas de dados, o que corresponde a um throughput médio de aproximadamente 2 241 requisições por segundo. Estes resultados foram alcançados graças a várias otimizações: as APIs foram executadas em modo detached (docker compose up -d), eliminando o overhead de I/O associado ao streaming de logs em tempo real; foi configurado basic_qos(prefetch_count=50) no consumidor para maximizar o débito sem comprometer a fiabilidade das mensagens; as ligações TCP ao RabbitMQ e ao PostgreSQL são mantidas abertas e reutilizadas, evitando custos de estabelecimento de conexão em cada operação; e a estratégia cache-aside com Redis (no caso do get) aliviou significativamente a carga de leituras no PostgreSQL, reduzindo as latências. Em conjunto, estes fatores permitem ao sistema lidar com elevados níveis de concorrência mantendo a latência sob controlo e garantindo 100 % de consistência dos dados, exemplo de grafico na figura da esquerda.
 
@@ -250,14 +265,15 @@ Para listar todos os pares chave-valor, basta carregar no botão “Listar tudo�
 
 ---
 
-## 📝 Nota Importante 
+<h2 id="nota">📝 Nota Importante dos testes de carga</h2>
+
 Durante os testes de carga verificámos que executar o sistema em modo “foreground” (i.e. **docker compose up** sem -d) introduz um overhead de I/O que impacta diretamente o desempenho. Cada log enviado para o terminal—print()s da aplicação, mensagens do Nginx, UVicorn e RabbitMQ—obriga a múltiplas operações de flush, parsing e formatação, consumindo CPU e I/O de disco. Quando geramos centenas ou milhares de logs por segundo, o próprio terminal se torna um fator limitador, impondo throttling e constantes sincronizações de buffer para não perder saída, o que retarda significativamente o processamento de pedidos.
 
 Em contrapartida, ao usar **docker compose up -d**, os containers correm em background sem despejar logs para o terminal, eliminando esse overhead de I/O. Nos nossos benchmarks, isso traduziu-se em throughput muito mais elevado e latências menores — prova de que a forma como gerimos o logging é um factor crítico a ter em conta em cenários de alta carga.
 
 ---
 
-## 🚀 Resultados típicos para grandes testes de carga:
+<h2 id="resultados">🚀 Resultados típicos para grandes testes de carga:</h2>
 
 - 1 000 000 de pedidos sem perda de mensagens (com basic_qos(prefetch_count=50)).
 - Tempo de processamento reduzido de 45min para 7min após optimização de conexões.
@@ -270,7 +286,8 @@ Em contrapartida, ao usar **docker compose up -d**, os containers correm em back
 
 ---
 
-## 📄 Licença
+<h2 id="licenca">📄 Licença</h2>
+
 - Este projecto está licenciado sob Vasile's Rules.
 - Desenvolvido por Vasile Karpa – 2025
 - Contacto: a74872@ualg.pt
