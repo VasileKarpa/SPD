@@ -209,6 +209,8 @@ Por fim, para listar todos os pares armazenados use curl http://localhost/api/al
    ```bash
    curl http://localhost/api/all
 
+> **⚠️ Nota** Para cmd ou powershell usar curl.exe em vez de curl (bash)
+
 ---
 
 <h2 id="frontend">🌐 Demo Frontend</h2>
