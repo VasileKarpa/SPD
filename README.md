@@ -11,12 +11,13 @@
 9. [☁️ Instalação e uso em cloud e standalone](#cloud) 
 10. [💻 Demo Terminal (em caso da interface http://localhost/ apresentar algum erro)](#terminal) 
 11. [🌐 Demo Frontend](#frontend) 
-12. [🧪 Testes de carga com siege e build sem print de logs (modo detached) vs com print de logs](#siege)  
-13. [💉 Testes de carga com ab e build sem print de logs (modo detached) vs com print de logs](#ab)  
-14. [📝 Nota Importante dos testes de carga](#nota)  
-15. [🚀 Resultados típicos para grandes testes de carga](#resultados)
-16. [📕 Documentação Complementar](#complementar)  
-17. [📄 Licença](#licenca)
+12. [📖 Manual da API](#api) 
+13. [🧪 Testes de carga com siege e build sem print de logs (modo detached) vs com print de logs](#siege)  
+14. [💉 Testes de carga com ab e build sem print de logs (modo detached) vs com print de logs](#ab)  
+15. [📝 Nota Importante dos testes de carga](#nota)  
+16. [🚀 Resultados típicos para grandes testes de carga](#resultados)
+17. [📕 Documentação Complementar](#complementar)  
+18. [📄 Licença](#licenca)
 
 ---
 
@@ -243,6 +244,12 @@ Para listar todos os pares chave-valor, basta carregar no botão “Listar tudo�
 <p align="center">
   <img src="assets/list.jpg" width="400" alt="list.jpg">
 </p>
+
+---
+
+<h2 id="api">📖 Manual da API</h2>
+
+- **Ver** [💻 Demo Terminal](#terminal) ❕❕❕
 
 ---
 
